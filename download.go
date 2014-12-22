@@ -14,6 +14,7 @@ import (
 )
 
 var config Config
+var working_dir string
 
 type Album struct {
 	File string `json:"file"`
@@ -62,7 +63,7 @@ func downloadFromUrl(url string) string {
 }
 
 func albumExists(album Album) bool {
-	path := album.Year + "/" + album.Name
+	path := working_dir + "/" + album.Year + "/" + album.Name
 	_, err := os.Stat(path)
 	if err != nil {
 		return false
@@ -140,12 +141,10 @@ func unzip(archive string, destination string) bool {
 		}
 		defer zipped.Close()
 
-		path := filepath.Join(destination, "/", f.Name)
+		path := filepath.Join(working_dir, "/", destination, "/", f.Name)
 		if f.FileInfo().IsDir() {
-			fmt.Println("Erstelle Verzeichnis:", path)
 			os.MkdirAll(path, f.Mode())
 		} else {
-			fmt.Println("Erstelle Datei:", path)
 			writer, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, f.Mode())
 			if err != nil {
 				fmt.Println("Kann Datei", path, "nicht schreiben:", err)
@@ -177,7 +176,8 @@ func isMyAlbum(album Album) bool {
 }
 
 func readConfig() {
-	file, err := os.Open("config.json")
+	path := working_dir + "/config.json"
+	file, err := os.Open(path)
 	if err != nil {
 		fmt.Println("Konnte meine Konfiguration nicht lesen, so gehts nicht!", err)
 		time.Sleep(10 * time.Second)
@@ -192,7 +192,20 @@ func readConfig() {
 	}
 }
 
+func setDirectory() {
+	binary_path, err := filepath.Abs(os.Args[0])
+	directory := filepath.Dir(binary_path)
+	if err != nil {
+		fmt.Println("Konnte mein aktuelles Verzeichnis nicht finden:", err)
+		time.Sleep(10 * time.Second)
+		os.Exit(1)
+	}
+	working_dir = directory
+	fmt.Println("Mein Arbeitsverzeichnis:", working_dir)
+}
+
 func main() {
+	setDirectory()
 	readConfig()
 
 	fmt.Println("Suche nach neuen Alben")
