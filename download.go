@@ -15,6 +15,7 @@ import (
 
 var config Config
 var working_dir string
+const version = "0.9"
 
 type Album struct {
 	File string `json:"file"`
@@ -38,9 +39,10 @@ type Config struct {
 func downloadFromUrl(url string) string {
 	tokens := strings.Split(url, "/")
 	fileName := tokens[len(tokens)-1]
-	fmt.Println("Download von ", url, "nach", fileName)
+	path := working_dir + "/" + fileName
 
-	output, err := os.Create(fileName)
+	fmt.Println("Download von: ", url)
+	output, err := os.Create(path)
 	if err != nil {
 		fmt.Println("Konnte Datei nicht erstellen", fileName, "-", err)
 		return ""
@@ -57,7 +59,7 @@ func downloadFromUrl(url string) string {
 		}
 		fmt.Println(n, "bytes heruntergeladen.")
 		defer response.Body.Close()
-		return fileName
+		return path
 	}
 	return ""
 }
@@ -192,6 +194,10 @@ func readConfig() {
 	}
 }
 
+func getFilenameFromPath(path string) string {
+	return filepath.Base(path)
+}
+
 func setDirectory() {
 	binary_path, err := filepath.Abs(os.Args[0])
 	directory := filepath.Dir(binary_path)
@@ -201,14 +207,23 @@ func setDirectory() {
 		os.Exit(1)
 	}
 	working_dir = directory
-	fmt.Println("Mein Arbeitsverzeichnis:", working_dir)
+	fmt.Println("Mein Verzeichnis:", working_dir)
+}
+
+func printHeader() {
+	fmt.Println("#####################################")
+	fmt.Println("# Family Album Downloader           #")
+	fmt.Println(fmt.Sprintf("# Version: %s                      #", version))
+	fmt.Println("#####################################")
+	fmt.Println("")
 }
 
 func main() {
+	printHeader()
 	setDirectory()
 	readConfig()
 
-	fmt.Println("Suche nach neuen Alben")
+	fmt.Println("### Suche nach neuen Alben ###")
 	metadata := getMetadata(config.MetadataUrl)
 	albums := metadata.Albums
 	for i := 0; i < len(albums); i++ {
@@ -222,7 +237,7 @@ func main() {
 				if archive == "" {
 					break
 				}
-				fmt.Println("Entpacke Datei: ", archive) 
+				fmt.Println("Entpacke Datei: ", getFilenameFromPath(archive)) 
 				unzip(archive, album.Year)
 				removeFile(archive)
 			} else {
@@ -230,6 +245,6 @@ func main() {
 			}
 		}
 	}
-	fmt.Println("Fertig!")
+	fmt.Println("### Fertig ###")
 	time.Sleep(10 * time.Second)
 }
